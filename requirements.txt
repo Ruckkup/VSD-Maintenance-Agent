@@ -1,0 +1,8 @@
+streamlit
+langchain
+langchain-google-genai
+langchain-chroma
+langchain-huggingface
+sentence-transformers
+chromadb
+torch --extra-index-url https://download.pytorch.org/whl/cpu
