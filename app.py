@@ -5,6 +5,7 @@ from langchain.chains import RetrievalQA
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import PromptTemplate
+import os # <--- ADDED THIS IMPORT
 
 # --- ตั้งค่าเริ่มต้น ---
 st.set_page_config(page_title="VSD Virtual Mentor", layout="wide")
@@ -15,6 +16,7 @@ st.markdown("ผู้ช่วยวิศวกรเสมือนสำห�
 # แนะนำให้ใช้ st.secrets สำหรับการใช้งานจริง
 # For testing, you can paste your key directly
 # GOOGLE_API_KEY = "AIzaSyDM0N01ki1RbULaMPK0aObuTNLl9weVyqU"
+GOOGLE_API_KEY = "" # Initialize to avoid NameError
 try:
     from google_api_key import GOOGLE_API_KEY
 except ImportError:
@@ -91,6 +93,7 @@ if prompt := st.chat_input("ถามปัญหาเกี่ยวกับ 
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    full_response = "" # Initialize full_response before the try block
     with st.chat_message("assistant"):
         # --- DEBUGGING STARTS HERE ---
         st.write("1. ได้รับคำถามแล้ว กำลังจะเรียก RAG pipeline...")
@@ -99,10 +102,9 @@ if prompt := st.chat_input("ถามปัญหาเกี่ยวกับ 
             with st.spinner("กำลังค้นหาข้อมูลและเรียบเรียงคำตอบ..."):
                 st.write("2. เข้าสู่ RAG pipeline... กำลังเรียก retriever เพื่อค้นหาข้อมูล...")
                 
-                # เราจะแยกส่วนการทำงานเพื่อดูว่าพังตรงไหน
-                # retriever = rag_pipeline.retriever  # สมมติว่า retriever อยู่ใน pipeline
-                # relevant_docs = retriever.get_relevant_documents(prompt)
-                # st.write(f"3. ค้นหาข้อมูลเจอแล้ว {len(relevant_docs)} ชิ้น กำลังจะส่งไปให้ LLM...")
+                # We can remove the intermediate debugging steps if the core functionality works.
+                # These were useful for initial debugging but might clutter the UI in production.
+                # st.write("3. ค้นหาข้อมูลเจอแล้ว ... กำลังจะส่งไปให้ LLM...")
 
                 # รัน pipeline ทั้งหมด
                 response = rag_pipeline({"query": prompt})
@@ -115,7 +117,7 @@ if prompt := st.chat_input("ถามปัญหาเกี่ยวกับ 
                 source_docs = response['source_documents']
                 if source_docs:
                     full_response += "\n\n---\n**แหล่งข้อมูลอ้างอิง:**\n"
-                    unique_sources = set([doc.metadata['source'] for doc in source_docs])
+                    unique_sources = set([doc.metadata['source'] for doc in source_docs if 'source' in doc.metadata]) # Added check for 'source' key
                     for source in unique_sources:
                         full_response += f"- {os.path.basename(source)}\n"
                 
@@ -123,6 +125,7 @@ if prompt := st.chat_input("ถามปัญหาเกี่ยวกับ 
         
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดร้ายแรงขึ้น: {e}")
+            full_response = "ขออภัย เกิดข้อผิดพลาดในการประมวลผลคำถามของคุณ โปรดลองอีกครั้งในภายหลัง" # Provide a fallback message
 
         st.write("5. จบการทำงานในส่วน assistant")
         # --- DEBUGGING ENDS HERE ---
